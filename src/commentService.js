@@ -61,12 +61,33 @@ export const extractComments = async (page) => {
           // Find reply button
           const replyButton = element.querySelector('div[role="button"][aria-label*="Reply"], a[aria-label*="Reply"]');
 
+          // Check if comment has image - use multiple robust selectors
+          const imageSelectors = [
+            'img[src*="scontent"]',
+            'img[src*="fbcdn"]',
+            'a[href*="photo"]',
+            'img[data-visualcompletion="media-vc-image"]',
+            'div[data-visualcompletion="media-vc-image"]',
+            'a[href*="/photo.php"]',
+            'a[href*="/photos/"]',
+            'img[class*="x"][src^="https://"]'  // Facebook uses dynamic classes starting with x
+          ];
+          
+          let hasImage = false;
+          for (const selector of imageSelectors) {
+            if (element.querySelector(selector)) {
+              hasImage = true;
+              break;
+            }
+          }
+
           return {
             id: commentId,
             author,
             text,
             element: element.outerHTML.substring(0, 200), // For debugging
             hasReplyButton: !!replyButton,
+            hasImage: hasImage,
             timestamp: Date.now()
           };
         } catch (e) {

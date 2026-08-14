@@ -120,21 +120,21 @@ const monitorLoop = async (page, config, ownerName) => {
         if (dropdownVisible) {
           // Switch to "เกี่ยวข้องมากที่สุด" / "Most relevant"
           await dropdown.click();
-          await page.waitForTimeout(500);
+          await page.waitForTimeout(300);
           const relevantOption = page.locator('[role="menuitem"]').filter({ 
             hasText: /เกี่ยวข้องมากที่สุด|Most relevant/i 
           }).first();
           await relevantOption.click().catch(() => {});
-          await page.waitForTimeout(500);
+          await page.waitForTimeout(200);
           
           // Switch back to "ใหม่ล่าสุด" / "Most recent"
           await dropdown.click();
-          await page.waitForTimeout(500);
+          await page.waitForTimeout(300);
           const newestOption = page.locator('[role="menuitem"]').filter({ 
             hasText: /ใหม่ล่าสุด|Most recent/i 
           }).first();
           await newestOption.click().catch(() => {});
-          await page.waitForTimeout(500);
+          await page.waitForTimeout(200);
         } else {
           // Fallback to reload if dropdown not found
           await page.reload({ waitUntil: 'domcontentloaded' });
@@ -147,16 +147,9 @@ const monitorLoop = async (page, config, ownerName) => {
       // Aggressive scroll to force Facebook to load new comments
       await page.evaluate(() => {
         window.scrollTo(0, document.body.scrollHeight);
-      });
-      await page.waitForTimeout(150);
-      await page.evaluate(() => {
         window.scrollTo(0, document.body.scrollHeight / 2);
-      });
-      await page.waitForTimeout(150);
-      await page.evaluate(() => {
         window.scrollTo(0, 0);
       });
-      await page.waitForTimeout(150);
       
       // Force page refresh by clicking on comment input area
       await page.evaluate(() => {
@@ -186,6 +179,12 @@ const monitorLoop = async (page, config, ownerName) => {
 
       if (newComments.length > 0) {
         logger.info(`✓ NEW COMMENTS DETECTED: ${newComments.length}`);
+        
+        // Log all detected comments
+        for (const comment of newComments) {
+          const imageStatus = comment.hasImage ? '🖼️' : '📝';
+          logger.info(`${imageStatus} DETECTED: ${comment.author}: ${comment.text.substring(0, 50)}${comment.text.length > 50 ? '...' : ''}`);
+        }
         
         for (const comment of newComments) {
           await processComment(page, comment, config, ownerName);
@@ -240,6 +239,13 @@ const processComment = async (page, comment, config, ownerName) => {
     if (!isCommentFromOwner(comment.author, ownerName)) {
       logger.info(`⏩ SKIPPED (not owner): ${comment.author}: ${comment.text}`);
       // Mark as processed but don't reply
+      database.markCommentProcessed(comment.id, comment.text, comment.author);
+      return;
+    }
+
+    // Check if comment has image (only reply to comments with images)
+    if (!comment.hasImage) {
+      logger.info(`⏩ SKIPPED (no image): ${comment.author}: ${comment.text}`);
       database.markCommentProcessed(comment.id, comment.text, comment.author);
       return;
     }
