@@ -1,0 +1,32 @@
+{
+  "name": "facebook-auto-reply-bot",
+  "version": "1.0.0",
+  "description": "Production-ready Facebook Group Auto Reply Bot with Playwright and SQLite",
+  "main": "src/app.js",
+  "type": "module",
+  "scripts": {
+    "login": "node src/app.js login",
+    "start": "node src/app.js run",
+    "status": "node src/app.js status",
+    "delete-last": "node src/app.js delete-last"
+  },
+  "keywords": [
+    "facebook",
+    "automation",
+    "bot",
+    "playwright",
+    "auto-reply"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "better-sqlite3": "^11.7.0",
+    "commander": "^12.1.0",
+    "dotenv": "^16.4.7",
+    "playwright": "^1.49.1",
+    "winston": "^3.17.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

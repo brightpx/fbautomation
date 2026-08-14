@@ -1,0 +1,14 @@
+{
+  "postUrl": "https://facebook.com/groups/YOUR_GROUP_ID/posts/YOUR_POST_ID",
+  "scanIntervalMs": 800,
+  "replyDelayMs": 0,
+  "headless": true,
+  "commands": {
+    "#price": "ราคา 590 บาท",
+    "#stock": "สินค้ายังพร้อมส่ง",
+    "#contact": "ติดต่อ Inbox ได้เลยครับ",
+    "#shipping": "จัดส่งฟรีทั่วไทย",
+    "#payment": "รับชำระเงินโอน พร้อมเพย์"
+  },
+  "defaultReply": "ขอบคุณครับ"
+}
