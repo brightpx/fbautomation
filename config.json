@@ -1,8 +1,9 @@
 {
-  "postUrl": "https://www.facebook.com/groups/2965724366922893/permalink/2972275236267806/?rdid=QJwibzqJwpuB1Jtv#",
+  "postUrl": "https://www.facebook.com/groups/463606731729246/posts/2106073944149175",
   "scanIntervalMs": 500,
   "replyDelayMs": 0,
-  "headless": true,
+  "headless": false,
+  "replyToOwnerNameMention": true,
   "commands": {
     "#price": "ราคา 590 บาท",
     "#stock": "สินค้ายังพร้อมส่ง",

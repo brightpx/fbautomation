@@ -62,6 +62,33 @@ export const startMonitoring = async (config) => {
 
     await page.waitForTimeout(3000);
 
+    // **CRITICAL FIX**: Switch to "Most Recent" sort BEFORE scanning
+    // This ensures Bot sees ALL new comments from the start
+    logger.info('🔄 Switching to "Most Recent" sort...');
+    try {
+      const dropdown = page.locator('div[role="button"]').filter({ 
+        hasText: /ความคิดเห็นทั้งหมด|ใหม่ล่าสุด|เกี่ยวข้องมากที่สุด|All comments|Most recent|Most relevant/i 
+      }).first();
+      
+      const dropdownVisible = await dropdown.isVisible({ timeout: 2000 }).catch(() => false);
+      
+      if (dropdownVisible) {
+        // Click dropdown
+        await dropdown.click();
+        await page.waitForTimeout(200);
+        
+        // Select "Most Recent" / "ใหม่ล่าสุด"
+        const newestOption = page.locator('[role="menuitem"]').filter({ 
+          hasText: /ใหม่ล่าสุด|Most recent/i 
+        }).first();
+        await newestOption.click();
+        await page.waitForTimeout(500);
+        logger.info('✓ Sort changed to "Most Recent"');
+      }
+    } catch (e) {
+      logger.warn(`⚠ Could not switch sort: ${e.message}`);
+    }
+
     // Detect post owner
     const ownerName = await detectPostOwner(page);
     if (ownerName) {
@@ -94,7 +121,7 @@ const monitorLoop = async (page, config, ownerName) => {
   let seenCommentIds = new Set();
   let consecutiveErrors = 0;
   const MAX_CONSECUTIVE_ERRORS = 5;
-  const RELOAD_INTERVAL = 10; // Reload every 10 scans
+  const RELOAD_INTERVAL = 3; // Reload every 3 scans (~1.5 seconds)
   let scanCount = 0;
 
   while (isMonitoring) {
@@ -105,60 +132,14 @@ const monitorLoop = async (page, config, ownerName) => {
         break;
       }
 
-      // Use comment view switching trick to refresh (faster than page reload)
+      // Reload page to get fresh comments from server
       scanCount++;
       if (scanCount >= RELOAD_INTERVAL) {
-        logger.info('🔄 Switching comment view to refresh...');
-        
-        // Find the sorting dropdown (could be "ใหม่ล่าสุด" or "เกี่ยวข้องมากที่สุด")
-        const dropdown = page.locator('div[role="button"]').filter({ 
-          hasText: /ใหม่ล่าสุด|เกี่ยวข้องมากที่สุด|Most recent|Most relevant/i 
-        }).first();
-        
-        const dropdownVisible = await dropdown.isVisible({ timeout: 1000 }).catch(() => false);
-        
-        if (dropdownVisible) {
-          // Switch to "เกี่ยวข้องมากที่สุด" / "Most relevant"
-          await dropdown.click();
-          await page.waitForTimeout(300);
-          const relevantOption = page.locator('[role="menuitem"]').filter({ 
-            hasText: /เกี่ยวข้องมากที่สุด|Most relevant/i 
-          }).first();
-          await relevantOption.click().catch(() => {});
-          await page.waitForTimeout(200);
-          
-          // Switch back to "ใหม่ล่าสุด" / "Most recent"
-          await dropdown.click();
-          await page.waitForTimeout(300);
-          const newestOption = page.locator('[role="menuitem"]').filter({ 
-            hasText: /ใหม่ล่าสุด|Most recent/i 
-          }).first();
-          await newestOption.click().catch(() => {});
-          await page.waitForTimeout(200);
-        } else {
-          // Fallback to reload if dropdown not found
-          await page.reload({ waitUntil: 'domcontentloaded' });
-          await page.waitForTimeout(2000);
-        }
-        
+        logger.info('🔄 Reloading page to fetch new comments...');
+        await page.reload({ waitUntil: 'domcontentloaded' });
+        await page.waitForTimeout(1500);
         scanCount = 0;
       }
-
-      // Aggressive scroll to force Facebook to load new comments
-      await page.evaluate(() => {
-        window.scrollTo(0, document.body.scrollHeight);
-        window.scrollTo(0, document.body.scrollHeight / 2);
-        window.scrollTo(0, 0);
-      });
-      
-      // Force page refresh by clicking on comment input area
-      await page.evaluate(() => {
-        const textboxes = document.querySelectorAll('[contenteditable="true"]');
-        if (textboxes.length > 0) {
-          textboxes[0].click();
-          textboxes[0].blur();
-        }
-      });
 
       // Extract all comments
       const allComments = await extractComments(page);
@@ -243,11 +224,20 @@ const processComment = async (page, comment, config, ownerName) => {
       return;
     }
 
-    // Check if comment has image (only reply to comments with images)
-    if (!comment.hasImage) {
-      logger.info(`⏩ SKIPPED (no image): ${comment.author}: ${comment.text}`);
-      database.markCommentProcessed(comment.id, comment.text, comment.author);
-      return;
+    // Check if comment mentions owner's name - if yes, reply immediately regardless of image
+    const mentionsOwner = config.replyToOwnerNameMention && 
+      ownerName && 
+      comment.text.toLowerCase().includes(ownerName.toLowerCase().split(' ')[0]); // Check first name
+
+    if (mentionsOwner) {
+      logger.info(`🎯 OWNER NAME MENTIONED - Reply immediately (skip image check)`);
+    } else {
+      // Check if comment has image (only reply to comments with images)
+      if (!comment.hasImage) {
+        logger.info(`⏩ SKIPPED (no image): ${comment.author}: ${comment.text}`);
+        database.markCommentProcessed(comment.id, comment.text, comment.author);
+        return;
+      }
     }
 
     // Log owner comment
