@@ -125,7 +125,7 @@ const monitorLoop = async (page, config, ownerName) => {
             hasText: /เกี่ยวข้องมากที่สุด|Most relevant/i 
           }).first();
           await relevantOption.click().catch(() => {});
-          await page.waitForTimeout(800);
+          await page.waitForTimeout(500);
           
           // Switch back to "ใหม่ล่าสุด" / "Most recent"
           await dropdown.click();
@@ -134,7 +134,7 @@ const monitorLoop = async (page, config, ownerName) => {
             hasText: /ใหม่ล่าสุด|Most recent/i 
           }).first();
           await newestOption.click().catch(() => {});
-          await page.waitForTimeout(800);
+          await page.waitForTimeout(500);
         } else {
           // Fallback to reload if dropdown not found
           await page.reload({ waitUntil: 'domcontentloaded' });
@@ -148,15 +148,15 @@ const monitorLoop = async (page, config, ownerName) => {
       await page.evaluate(() => {
         window.scrollTo(0, document.body.scrollHeight);
       });
-      await page.waitForTimeout(300);
+      await page.waitForTimeout(150);
       await page.evaluate(() => {
         window.scrollTo(0, document.body.scrollHeight / 2);
       });
-      await page.waitForTimeout(300);
+      await page.waitForTimeout(150);
       await page.evaluate(() => {
         window.scrollTo(0, 0);
       });
-      await page.waitForTimeout(300);
+      await page.waitForTimeout(150);
       
       // Force page refresh by clicking on comment input area
       await page.evaluate(() => {

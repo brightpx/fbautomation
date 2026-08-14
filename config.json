@@ -1,6 +1,6 @@
 {
   "postUrl": "https://www.facebook.com/groups/2965724366922893/permalink/2972275236267806/?rdid=QJwibzqJwpuB1Jtv#",
-  "scanIntervalMs": 800,
+  "scanIntervalMs": 500,
   "replyDelayMs": 0,
   "headless": true,
   "commands": {

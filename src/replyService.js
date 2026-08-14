@@ -39,7 +39,7 @@ export const sendReply = async (page, commentAuthor, commentText, replyText, rep
     logger.info(`✓ REPLY BUTTON CLICKED (${result.method})`);
     
     // Wait for Facebook to show the NEW reply input
-    await page.waitForTimeout(3000);
+    await page.waitForTimeout(1500);
 
     // Count textboxes AFTER clicking reply button
     const textboxCountAfter = await page.evaluate(() => {
@@ -95,7 +95,7 @@ export const sendReply = async (page, commentAuthor, commentText, replyText, rep
       return { success: false, replyId: null, latency: 0 };
     }
     
-    await page.waitForTimeout(1000);
+    await page.waitForTimeout(500);
     
     // Check if reply actually appeared on the page
     const replyVerification = await page.evaluate(({ replyText }) => {
