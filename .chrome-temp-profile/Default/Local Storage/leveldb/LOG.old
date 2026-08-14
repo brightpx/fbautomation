@@ -1,2 +1,3 @@
-2026/08/14-10:54:05.793 a320 Creating DB C:\Users\Possawee\fbautomation\fbautomation\.chrome-temp-profile\Default\Local Storage\leveldb since it was missing.
-2026/08/14-10:54:05.822 a320 Reusing MANIFEST C:\Users\Possawee\fbautomation\fbautomation\.chrome-temp-profile\Default\Local Storage\leveldb/MANIFEST-000001
+2026/08/14-10:56:38.500 6758 Reusing MANIFEST C:\Users\Possawee\fbautomation\fbautomation\.chrome-temp-profile\Default\Local Storage\leveldb/MANIFEST-000001
+2026/08/14-10:56:38.507 6758 Recovering log #3
+2026/08/14-10:56:38.510 6758 Reusing old log C:\Users\Possawee\fbautomation\fbautomation\.chrome-temp-profile\Default\Local Storage\leveldb/000003.log 

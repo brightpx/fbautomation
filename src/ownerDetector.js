@@ -22,7 +22,10 @@ export const detectPostOwner = async (page) => {
     let ownerName = await page.evaluate(() => {
       const h2Elements = document.querySelectorAll('h2');
       const uiKeywords = ['ประวัติการแชท', 'ความคิดเห็น', 'ยังไม่มี', 'เมนู', 'Menu', 'Facebook', 
-                          'Share', 'แชร์', 'Comments', 'Notifications', 'ทางลัด', 'จดจำรหัสผ่าน'];
+                          'Share', 'แชร์', 'Comments', 'Notifications', 'ทางลัด', 'จดจำรหัสผ่าน',
+                          'ใหม่', 'New', 'ข่าวสาร', 'News', 'โพสต์', 'Post'];
+      
+      const candidates = [];
       
       for (const h2 of h2Elements) {
         const text = h2.textContent.trim();
@@ -37,14 +40,28 @@ export const detectPostOwner = async (page) => {
         const isUIText = uiKeywords.some(keyword => text.includes(keyword));
         if (isUIText) continue;
         
-        // Plain name (2-50 chars, not all caps)
-        if (text.length >= 2 && text.length <= 50) {
+        // Check if it contains English + Thai name pattern (likely a real name)
+        const hasEnglish = /[a-zA-Z]/.test(text);
+        const hasThai = /[\u0E00-\u0E7F]/.test(text);
+        const hasSpace = text.includes(' ');
+        
+        // Prefer names with both first and last name (has space)
+        if (hasSpace && (hasEnglish || hasThai)) {
+          candidates.push({ text, priority: 10 });
+        } else if (text.length >= 2 && text.length <= 50) {
           const capsRatio = (text.match(/[A-Z]/g) || []).length / text.length;
           if (capsRatio < 0.8) { // Not all caps
-            return text;
+            candidates.push({ text, priority: 1 });
           }
         }
       }
+      
+      // Return highest priority candidate
+      if (candidates.length > 0) {
+        candidates.sort((a, b) => b.priority - a.priority);
+        return candidates[0].text;
+      }
+      
       return null;
     });
 

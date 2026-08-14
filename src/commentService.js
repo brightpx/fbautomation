@@ -75,17 +75,9 @@ export const extractComments = async (page) => {
       }
 
       function generateCommentId(author, text, element) {
-        // Try to find actual Facebook comment ID
-        const possibleId = element.getAttribute('data-commentid') || 
-                          element.getAttribute('id') ||
-                          element.querySelector('[data-commentid]')?.getAttribute('data-commentid');
-        
-        if (possibleId && possibleId.length > 5) {
-          return possibleId;
-        }
-
-        // Generate hash-based ID
-        const str = `${author}:${text}:${Date.now()}`;
+        // Use stable ID based on author + text content only (no timestamp)
+        // This prevents treating the same comment as multiple "new" comments
+        const str = `${author}:${text}`;
         let hash = 0;
         for (let i = 0; i < str.length; i++) {
           const char = str.charCodeAt(i);
@@ -110,12 +102,16 @@ export const extractComments = async (page) => {
  */
 export const getCommentReplyButton = async (page, commentAuthor, commentText) => {
   try {
-    // Find the comment element by matching author and text
-    const replyButton = await page.evaluateHandle(({ author, text }) => {
+    // Find and click reply button directly in browser context (better for hidden elements)
+    const result = await page.evaluate(({ author, text }) => {
       const allElements = document.querySelectorAll('div[role="article"]');
       
-      for (const element of allElements) {
-        const authorEl = element.querySelector('a[role="link"] span, a strong, h3 span');
+      console.log(`[DEBUG] Searching for comment by "${author}" with text "${text}"`);
+      console.log(`[DEBUG] Found ${allElements.length} article elements`);
+      
+      for (let i = 0; i < allElements.length; i++) {
+        const element = allElements[i];
+        const authorEl = element.querySelector('a[role="link"] span, a strong, h3 span, h4 span');
         const authorName = authorEl ? authorEl.textContent.trim() : '';
         
         if (authorName !== author) continue;
@@ -124,20 +120,61 @@ export const getCommentReplyButton = async (page, commentAuthor, commentText) =>
         const textElements = element.querySelectorAll('div[dir="auto"]');
         for (const textEl of textElements) {
           if (textEl.textContent.trim() === text) {
-            // Found the right comment, now find reply button
-            const replyBtn = element.querySelector('div[role="button"][aria-label*="Reply"], a[aria-label*="Reply"]');
-            return replyBtn;
+            console.log(`[DEBUG] Found matching comment at index ${i}!`);
+            console.log(`[DEBUG] Comment element HTML:`, element.outerHTML.substring(0, 300));
+            
+            // Try CSS selector-based search first
+            const cssSelectors = [
+              'div[role="button"][aria-label*="Reply"]',
+              'div[role="button"][aria-label*="ตอบกลับ"]',
+              'a[aria-label*="Reply"]',
+              'a[aria-label*="ตอบกลับ"]'
+            ];
+            
+            for (const selector of cssSelectors) {
+              const replyBtn = element.querySelector(selector);
+              if (replyBtn) {
+                console.log(`[DEBUG] Found reply button with selector: ${selector}`);
+                // Click directly in browser context
+                replyBtn.click();
+                return { success: true, method: selector };
+              }
+            }
+            
+            // Fallback: Search by text content
+            const allButtons = element.querySelectorAll('div[role="button"], span[role="button"]');
+            console.log(`[DEBUG] Searching ${allButtons.length} buttons by text content...`);
+            
+            for (const btn of allButtons) {
+              const btnText = btn.textContent.trim().toLowerCase();
+              if (btnText === 'reply' || btnText === 'ตอบกลับ' || btnText.includes('reply') || btnText.includes('ตอบกลับ')) {
+                console.log(`[DEBUG] Found reply button by text: "${btnText}"`);
+                btn.click();
+                return { success: true, method: 'text-match' };
+              }
+            }
+            
+            // If still not found, log all buttons
+            const allClickable = element.querySelectorAll('div[role="button"], a[role="link"], span[role="button"]');
+            console.log(`[DEBUG] Could not find reply button. Found ${allClickable.length} clickable elements:`);
+            allClickable.forEach((btn, i) => {
+              const label = btn.getAttribute('aria-label') || btn.textContent.trim().substring(0, 50);
+              console.log(`  [${i}] role="${btn.getAttribute('role')}" text="${label}"`);
+            });
+            
+            return { success: false, error: 'button_not_found' };
           }
         }
       }
       
-      return null;
+      console.log(`[DEBUG] Comment not found in DOM`);
+      return { success: false, error: 'comment_not_found' };
     }, { author: commentAuthor, text: commentText });
 
-    return replyButton;
+    return result;
   } catch (error) {
     logger.error(`Get reply button error: ${error.message}`);
-    return null;
+    return { success: false, error: error.message };
   }
 };
 

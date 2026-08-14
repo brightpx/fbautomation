@@ -13,33 +13,104 @@ export const sendReply = async (page, commentAuthor, commentText, replyText, rep
       await page.waitForTimeout(replyDelayMs);
     }
 
-    // Find the comment and its reply button
-    const replyButton = await getCommentReplyButton(page, commentAuthor, commentText);
+    // Listen to console messages from the browser
+    page.on('console', msg => {
+      const text = msg.text();
+      if (text.includes('[DEBUG]')) {
+        logger.info(text);
+      }
+    });
+
+    // Count textboxes BEFORE clicking reply button
+    const textboxCountBefore = await page.evaluate(() => {
+      const boxes = document.querySelectorAll('[contenteditable="true"][role="textbox"]');
+      console.log(`[DEBUG] Textboxes BEFORE clicking reply: ${boxes.length}`);
+      return boxes.length;
+    });
+
+    // Find and click the reply button (now clicks directly in browser context)
+    const result = await getCommentReplyButton(page, commentAuthor, commentText);
     
-    if (!replyButton) {
-      logger.error('✗ REPLY BUTTON NOT FOUND');
+    if (!result || !result.success) {
+      logger.error('✗ REPLY BUTTON NOT FOUND OR CLICK FAILED');
       return { success: false, replyId: null, latency: 0 };
     }
 
-    // Click reply button
-    await replyButton.asElement().click();
-    await page.waitForTimeout(500);
-
-    // Find the reply input field that appears after clicking Reply
-    const replyInput = await page.locator('[contenteditable="true"][role="textbox"]').last();
+    logger.info(`✓ REPLY BUTTON CLICKED (${result.method})`);
     
-    if (!await replyInput.isVisible({ timeout: 3000 })) {
-      logger.error('✗ REPLY INPUT NOT FOUND');
+    // Wait for Facebook to show the NEW reply input
+    await page.waitForTimeout(3000);
+
+    // Count textboxes AFTER clicking reply button
+    const textboxCountAfter = await page.evaluate(() => {
+      const boxes = document.querySelectorAll('[contenteditable="true"][role="textbox"]');
+      console.log(`[DEBUG] Textboxes AFTER clicking reply: ${boxes.length}`);
+      return boxes.length;
+    });
+    
+    logger.info(`[DEBUG] Textboxes: before=${textboxCountBefore}, after=${textboxCountAfter}`);
+
+    // NEW STRATEGY: Use Playwright API to type text (not evaluate())
+    // Find textbox with aria-label containing "ตอบกลับ" using Playwright locator
+    try {
+      // Try to find reply textbox by aria-label
+      const replyTextbox = page.locator('[contenteditable="true"][role="textbox"]').filter({ 
+        has: page.locator('text=/ตอบกลับ|reply/i') 
+      }).or(
+        page.locator('[contenteditable="true"][role="textbox"][aria-label*="ตอบกลับ"]')
+      ).or(
+        page.locator('[contenteditable="true"][role="textbox"][aria-label*="Reply"]')
+      ).first();
+      
+      // Check if it exists and is visible
+      const isVisible = await replyTextbox.isVisible({ timeout: 1000 }).catch(() => false);
+      
+      if (!isVisible) {
+        logger.error('✗ REPLY TEXTBOX NOT VISIBLE');
+        return { success: false, replyId: null, latency: 0 };
+      }
+      
+      logger.info('[DEBUG] Found reply textbox with Playwright locator');
+      
+      // Click to focus
+      await replyTextbox.click();
+      logger.info('[DEBUG] Textbox clicked and focused');
+      
+      // Type the reply text using Playwright (this properly simulates real typing)
+      await replyTextbox.fill(replyText);
+      logger.info(`[DEBUG] Text filled using Playwright.fill(): "${replyText}"`);
+      
+      // Verify the text was filled
+      const filledText = await replyTextbox.textContent();
+      logger.info(`[DEBUG] Verification - textContent after fill: "${filledText}"`);
+      
+      logger.info('✓ REPLY TEXT FILLED (playwright-locator-fill)');
+      
+      // Submit using Enter key
+      await replyTextbox.press('Enter');
+      logger.info('[DEBUG] Enter key pressed using Playwright.press()');
+      
+    } catch (error) {
+      logger.error(`✗ PLAYWRIGHT LOCATOR FAILED: ${error.message}`);
       return { success: false, replyId: null, latency: 0 };
     }
-
-    // Type the reply
-    await replyInput.fill(replyText);
-    await page.waitForTimeout(300);
-
-    // Press Enter to submit
-    await replyInput.press('Enter');
+    
     await page.waitForTimeout(1000);
+    
+    // Check if reply actually appeared on the page
+    const replyVerification = await page.evaluate(({ replyText }) => {
+      const allText = document.body.innerText;
+      const replyAppeared = allText.includes(replyText);
+      console.log(`[DEBUG] Verification: Reply text "${replyText}" appears on page: ${replyAppeared}`);
+      
+      // Count comments after submission
+      const commentElements = document.querySelectorAll('[role="article"]');
+      console.log(`[DEBUG] Total article elements after submission: ${commentElements.length}`);
+      
+      return { replyAppeared, articleCount: commentElements.length };
+    }, { replyText });
+    
+    logger.info(`[DEBUG] Reply verification: appeared=${replyVerification.replyAppeared}, articles=${replyVerification.articleCount}`);
 
     const latency = Date.now() - startTime;
 

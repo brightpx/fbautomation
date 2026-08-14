@@ -1,2 +1,3 @@
-2026/08/14-10:57:56.494 69dc Creating DB C:\Users\Possawee\fbautomation\fbautomation\.chrome-temp-profile\Default\IndexedDB\https_www.facebook.com_0.indexeddb.leveldb since it was missing.
-2026/08/14-10:57:56.502 69dc Reusing MANIFEST C:\Users\Possawee\fbautomation\fbautomation\.chrome-temp-profile\Default\IndexedDB\https_www.facebook.com_0.indexeddb.leveldb/MANIFEST-000001
+2026/08/14-15:01:13.868 142f0 Reusing MANIFEST C:\Users\Possawee\fbautomation\fbautomation\.chrome-temp-profile\Default\IndexedDB\https_www.facebook.com_0.indexeddb.leveldb/MANIFEST-000001
+2026/08/14-15:01:13.868 142f0 Recovering log #3
+2026/08/14-15:01:13.878 142f0 Reusing old log C:\Users\Possawee\fbautomation\fbautomation\.chrome-temp-profile\Default\IndexedDB\https_www.facebook.com_0.indexeddb.leveldb/000003.log 
