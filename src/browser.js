@@ -19,8 +19,12 @@ export const launchBrowser = async (headless = true, storageStatePath = null) =>
         '--no-sandbox',
         '--disable-setuid-sandbox',
         '--disable-web-security',
-        '--disable-features=IsolateOrigins,site-per-process'
-      ]
+        '--disable-features=IsolateOrigins,site-per-process',
+        '--disable-infobars',
+        '--window-size=1920,1080'
+      ],
+      // Slow down actions to appear more human-like during login
+      slowMo: headless ? 0 : 50
     });
 
     const contextOptions = {
@@ -38,12 +42,28 @@ export const launchBrowser = async (headless = true, storageStatePath = null) =>
     context = await browser.newContext(contextOptions);
 
     // Optimize performance - block unnecessary resources
+    // BUT allow images during login (for reCAPTCHA)
     await context.route('**/*', (route) => {
       const resourceType = route.request().resourceType();
       const url = route.request().url();
       
-      // Block images, fonts, media
-      if (['image', 'font', 'media', 'stylesheet'].includes(resourceType)) {
+      // Allow reCAPTCHA images
+      if (url.includes('recaptcha') || url.includes('google.com/recaptcha')) {
+        return route.continue();
+      }
+      
+      // During login (non-headless), allow images for reCAPTCHA
+      if (!headless && resourceType === 'image') {
+        return route.continue();
+      }
+      
+      // Block images, fonts, media ONLY in headless mode
+      if (headless && ['image', 'font', 'media', 'stylesheet'].includes(resourceType)) {
+        return route.abort();
+      }
+      
+      // Block fonts and stylesheets in non-headless (but keep images)
+      if (!headless && ['font', 'stylesheet'].includes(resourceType)) {
         return route.abort();
       }
       

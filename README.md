@@ -73,15 +73,37 @@ cp .env.example .env
 
 ครั้งแรกต้อง Login เพื่อบันทึก Session:
 
+#### วิธีที่ 1: Chrome Profile Login (Default - แนะนำ)
+
 ```bash
 node src/app.js login
 ```
 
-ระบบจะเปิด Browser ให้คุณ Login เอง:
-1. Login เข้า Facebook
-2. ทำ 2FA ถ้ามี
-3. รอจนเห็น News Feed
-4. กด Enter ใน Terminal
+**ขั้นตอน:**
+1. ปิด Chrome ทั้งหมดให้หมดก่อน
+2. รันคำสั่งด้านบน
+3. กด Enter
+4. Chrome จะเปิดพร้อม Facebook ที่ Login อยู่แล้ว
+5. Session ถูกบันทึกทันที (ไม่มี CAPTCHA!)
+
+**ข้อดี:**
+- ✅ ไม่มี CAPTCHA เลย!
+- ✅ Login เร็วและง่าย
+- ✅ ใช้ Chrome Profile ที่มีอยู่แล้ว
+
+#### วิธีที่ 2: Playwright Login (สำรอง)
+
+```bash
+node src/app.js login --standard
+```
+
+**ขั้นตอน:**
+1. Browser จะเปิดขึ้นมา
+2. Login เข้า Facebook
+3. ทำ reCAPTCHA ถ้ามี
+4. ทำ 2FA ถ้ามี
+5. รอจนเห็น News Feed
+6. กด Enter ใน Terminal
 
 Session จะถูกบันทึกใน `storageState.json`
 

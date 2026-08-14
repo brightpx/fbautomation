@@ -5,6 +5,7 @@ import fs from 'fs';
 import { fileURLToPath } from 'url';
 import logger from './logger.js';
 import { performLogin } from './login.js';
+import { performChromeProfileLogin } from './chromeProfileLogin.js';
 import { startMonitoring, setupGracefulShutdown } from './monitor.js';
 import { deleteReply, deleteLastReply } from './deleteReply.js';
 import database from '../database/database.js';
@@ -46,15 +47,28 @@ program
 program
   .command('login')
   .description('Login to Facebook and save session')
-  .action(async () => {
+  .option('--standard', 'Use standard Playwright login instead of Chrome profile')
+  .action(async (options) => {
     try {
-      const success = await performLogin();
+      let success = false;
+      
+      if (options.standard) {
+        // Standard Playwright login
+        success = await performLogin();
+      } else {
+        // Use Chrome profile method by default (bypass CAPTCHA)
+        success = await performChromeProfileLogin();
+      }
+      
       if (success) {
         logger.info('');
         logger.info('✓ You can now run: node src/app.js run');
         process.exit(0);
       } else {
         logger.error('✗ Login failed');
+        logger.info('');
+        logger.info('💡 TIP: If you keep getting CAPTCHA, try:');
+        logger.info('   node src/app.js login --chrome-profile');
         process.exit(1);
       }
     } catch (error) {

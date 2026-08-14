@@ -1,5 +1,5 @@
 {
-  "postUrl": "https://facebook.com/groups/YOUR_GROUP_ID/posts/YOUR_POST_ID",
+  "postUrl": "https://www.facebook.com/share/p/1LTN8aHJmC",
   "scanIntervalMs": 800,
   "replyDelayMs": 0,
   "headless": true,
@@ -10,5 +10,5 @@
     "#shipping": "จัดส่งฟรีทั่วไทย",
     "#payment": "รับชำระเงินโอน พร้อมเพย์"
   },
-  "defaultReply": "ขอบคุณครับ"
+  "defaultReply": "f"
 }
